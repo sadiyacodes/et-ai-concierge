@@ -51,18 +51,23 @@ A production-quality, multi-agent AI concierge that guides users through the ful
 
 ```mermaid
 flowchart TB
-    subgraph UserLayer["📥 Input Layer"]
-        UI[/"💬 Chat Query<br/>(WebSocket)"/]
+    subgraph Clients["👨‍💻 Client Interface"]
+        direction LR
+        subgraph UserLayer["📥 Input Layer"]
+            UI[/"💬 Chat Query<br/>(WebSocket)"/]
+        end
+        subgraph OutputLayer["📤 Output Layer"]
+            Out[/"📝 Streamed Assistant Response<br/>+ Embedded Product Links"/]
+        end
     end
 
-    subgraph Core["🤖 ET AI Concierge Orchestrator<br/><br/>"]
-        API["FastAPI Server"]
-        Graph{"LangGraph<br/>State Machine"}
-        API <--> Graph
-    end
-
-    subgraph OutputLayer["📤 Output Layer"]
-        Out[/"📝 Streamed Assistant Response<br/>+ Embedded Product Links"/]
+    subgraph Core["🤖 ET AI Concierge Orchestrator"]
+        subgraph padding[" "]
+            direction LR
+            API["FastAPI Server"]
+            Graph{"LangGraph<br/>State Machine"}
+            API <--> Graph
+        end
     end
 
     subgraph Memory["🧠 Memory Systems"]
@@ -88,6 +93,7 @@ flowchart TB
     Graph <--> External
 
     style Core fill:#fff0e6,stroke:#ff6600,stroke-width:2px
+    style padding fill:none,stroke:none;
     style UserLayer fill:#f0fdf4,stroke:#22c55e,stroke-width:1px
     style OutputLayer fill:#f0f9ff,stroke:#0ea5e9,stroke-width:1px
     style LLMChain fill:#eff6ff,stroke:#3b82f6,stroke-width:1px
