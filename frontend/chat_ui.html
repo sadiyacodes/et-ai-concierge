@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET AI Concierge</title>
+    <style>
+        @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+
+        :root {
+            --et-red: #CC0000;
+            --et-orange: #FF6600;
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #242424;
+            --bg-user-msg: #2a1a1a;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666;
+            --border-color: #333;
+            --shadow: 0 2px 12px rgba(0,0,0,0.3);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-user-msg: #fef2f2;
+            --text-primary: #1a1a1a;
+            --text-secondary: #555;
+            --text-muted: #999;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Left sidebar — Profile Panel */
+        .profile-panel {
+            width: 300px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .profile-panel.open { display: flex; }
+
+        .profile-panel h3 {
+            padding: 16px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--et-red);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .profile-field {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        .profile-field .label {
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .profile-field .value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .profile-field .confidence {
+            color: var(--text-muted);
+            font-size: 10px;
+            margin-left: 6px;
+        }
+
+        .completeness-bar {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .completeness-bar .bar-bg {
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .completeness-bar .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--et-red), var(--et-orange));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Main chat area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--et-red);
+            line-height: 1;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .header-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-icon {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        /* Messages */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--bg-user-msg);
+            border: 1px solid rgba(204, 0, 0, 0.2);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Recommendations */
+        .rec-cards {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .rec-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            flex: 1;
+            min-width: 200px;
+            max-width: 280px;
+        }
+
+        .rec-card .rec-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .rec-card .rec-reason {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .rec-card .rec-cta {
+            display: inline-block;
+            padding: 6px 12px;
+            background: var(--et-red);
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .rec-card .rec-cta:hover {
+            background: #aa0000;
+        }
+
+        /* Inline product hyperlinks injected by the AI */
+        .message.assistant .inline-link {
+            color: var(--et-orange);
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 1px dashed var(--et-orange);
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .message.assistant .inline-link:hover {
+            color: var(--et-red);
+            border-bottom-style: solid;
+        }
+
+        .rec-card .rec-free {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #1a5c1a;
+            color: #5cdb5c;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .typing-indicator.active { display: flex; }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Input */
+        .input-container {
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .input-wrapper textarea {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            resize: none;
+            max-height: 120px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrapper textarea:focus {
+            border-color: var(--et-red);
+        }
+
+        .input-wrapper textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            background: var(--et-red);
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover { background: #aa0000; }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Right sidebar — Journey */
+        .journey-panel {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .journey-panel.open { display: flex; }
+
+        .journey-panel h3 {
+            padding: 16px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--et-orange);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .journey-phases {
+            padding: 16px;
+        }
+
+        .journey-phase {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 13px;
+        }
+
+        .phase-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .phase-dot.completed { background: #22c55e; border-color: #22c55e; }
+        .phase-dot.active { background: var(--et-orange); border-color: var(--et-orange); }
+
+        .journey-step {
+            padding: 12px 16px;
+            margin: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .journey-step .step-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .journey-step .step-action { color: var(--text-primary); }
+
+        .journey-step .step-cta {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: var(--et-orange);
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        /* Demo panel */
+        .demo-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .demo-btn {
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            text-align: left;
+        }
+
+        .demo-btn:hover {
+            border-color: var(--et-red);
+            transform: translateX(-4px);
+        }
+
+        .demo-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .demo-toggle {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--et-red);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 101;
+        }
+
+        /* Disclaimer text */
+        .disclaimer-text {
+            font-style: italic;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .profile-panel, .journey-panel { display: none !important; }
+            .profile-panel.open, .journey-panel.open {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
+                z-index: 200;
+                display: flex !important;
+            }
+            .message { max-width: 90%; }
+            .rec-card { min-width: 160px; }
+            .demo-panel { right: 10px; bottom: 70px; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Profile Panel (Left) -->
+        <aside class="profile-panel" id="profilePanel">
+            <h3>User Profile</h3>
+            <div class="completeness-bar">
+                <div style="display:flex;justify-content:space-between;font-size:12px;">
+                    <span>Profile Completeness</span>
+                    <span id="completenessText">0%</span>
+                </div>
+                <div class="bar-bg">
+                    <div class="bar-fill" id="completenessBar" style="width:0%"></div>
+                </div>
+            </div>
+            <div id="profileFields"></div>
+        </aside>
+
+        <!-- Main Chat -->
+        <main class="chat-container">
+            <header class="header">
+                <div class="header-left">
+                    <button class="btn-icon" onclick="togglePanel('profilePanel')" title="Toggle Profile">&#128100;</button>
+                    <div>
+                        <span class="logo">ET</span>
+                        <span class="header-title">AI Concierge</span>
+                        <div class="header-subtitle">Your personal guide to the Economic Times ecosystem</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-icon" onclick="togglePanel('journeyPanel')" title="Toggle Journey">&#128204;</button>
+                    <button class="btn-icon" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">&#9790;</button>
+                    <button class="btn-icon" onclick="resetSession()" title="New Session">&#10227;</button>
+                </div>
+            </header>
+
+            <div class="messages" id="messages"></div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea id="userInput" rows="1" placeholder="Ask me anything about ET's products, investing, or your finances..."
+                              onkeydown="handleKeyDown(event)"></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Journey Panel (Right) -->
+        <aside class="journey-panel" id="journeyPanel">
+            <h3>Your Journey</h3>
+            <div class="journey-phases" id="journeyPhases">
+                <div class="journey-phase">
+                    <div class="phase-dot active" id="dot-discover"></div>
+                    <span>Discover</span>
+                </div>
+                <div class="journey-phase">
+                    <div class="phase-dot" id="dot-engage"></div>
+                    <span>Engage</span>
+                </div>
+                <div class="journey-phase">
+                    <div class="phase-dot" id="dot-commit"></div>
+                    <span>Commit</span>
+                </div>
+                <div class="journey-phase">
+                    <div class="phase-dot" id="dot-deepen"></div>
+                    <span>Deepen</span>
+                </div>
+            </div>
+            <div id="journeySteps"></div>
+        </aside>
+    </div>
+
+    <!-- Demo Scenario Panel -->
+    <button class="demo-toggle" id="demoToggle" onclick="toggleDemoPanel()" style="display: none;">Demo Scenarios</button>
+    <div class="demo-panel" id="demoPanel" style="display:none;">
+        <button class="demo-btn" onclick="runDemo('cold_start')">&#127381; Cold Start — First-Time Investor</button>
+        <button class="demo-btn" onclick="runDemo('lapsed_subscriber')">&#128260; Lapsed Subscriber Re-engagement</button>
+        <button class="demo-btn" onclick="runDemo('cross_sell_home_loan')">&#127968; Home Loan Cross-Sell</button>
+    </div>
+
+    <script>
+        // --- State ---
+        const API_BASE = window.location.origin;
+        let sessionId = '';
+        let userId = '';
+        let ws = null;
+        let isProcessing = false;
+        let demoRunning = false;
+
+        // --- Init ---
+        async function init() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/session/start`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({user_id: null, returning_user_hint: false})
+                });
+                const data = await resp.json();
+                sessionId = data.session_id;
+                userId = data.user_id;
+                addMessage('assistant', data.greeting);
+                connectWebSocket();
+            } catch (e) {
+                sessionId = crypto.randomUUID();
+                userId = crypto.randomUUID();
+                addMessage('assistant', 'Welcome to Economic Times. I\'m your AI concierge — I can help you discover the right tools, content, and financial products. What\'s on your mind?');
+                connectWebSocket();
+            }
+        }
+
+        // --- WebSocket ---
+        function connectWebSocket() {
+            try {
+                const wsUrl = `${API_BASE.replace('http', 'ws')}/ws/chat/${sessionId}`;
+                ws = new WebSocket(wsUrl);
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'typing') {
+                        showTyping(true);
+                    } else if (data.type === 'token') {
+                        appendToken(data.content);
+                    } else if (data.type === 'complete') {
+                        finalizeMessage(data);
+                    } else if (data.type === 'error') {
+                        console.error('WS error:', data.content);
+                    }
+                };
+
+                ws.onclose = () => {
+                    setTimeout(connectWebSocket, 3000);
+                };
+
+                ws.onerror = () => {};
+            } catch (e) {}
+        }
+
+        // --- Messages ---
+        function addMessage(role, content, recommendations, meta) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            let html = `<div class="content">${role === 'assistant' ? renderContent(content) : escapeHtml(content)}</div>`;
+
+            if (recommendations && recommendations.length > 0) {
+                html += '<div class="rec-cards">';
+                for (const rec of recommendations) {
+                    html += `<div class="rec-card">
+                        <div class="rec-name">${escapeHtml(rec.product_name || '')}
+                            ${rec.is_free ? '<span class="rec-free">FREE</span>' : ''}
+                        </div>
+                        <div class="rec-reason">${escapeHtml(rec.user_facing_reason || '')}</div>
+                        <a href="${escapeHtml(rec.cta_url || '#')}" target="_blank" rel="noopener" class="rec-cta">${escapeHtml(rec.cta_text || 'Learn More')}</a>
+                    </div>`;
+                }
+                html += '</div>';
+            }
+
+            if (meta) {
+                const parts = [];
+                if (meta.evaluator_score) parts.push(`Score: ${(meta.evaluator_score * 100).toFixed(0)}%`);
+                if (meta.intents && meta.intents.length) parts.push(`Intent: ${meta.intents[0]}`);
+                if (parts.length) {
+                    html += `<div class="meta">${parts.join(' · ')}</div>`;
+                }
+            }
+
+            div.innerHTML = html;
+            container.appendChild(div);
+            scrollToBottom();
+        }
+
+        let streamingDiv = null;
+        let streamingText = '';
+        function appendToken(token) {
+            showTyping(false);
+            const container = document.getElementById('messages');
+            if (!streamingDiv) {
+                streamingDiv = document.createElement('div');
+                streamingDiv.className = 'message assistant';
+                streamingDiv.innerHTML = '<div class="content"></div>';
+                container.appendChild(streamingDiv);
+                streamingText = '';
+            }
+            streamingText += token;
+            // Render with link support as tokens arrive
+            streamingDiv.querySelector('.content').innerHTML = renderContent(streamingText);
+            scrollToBottom();
+        }
+
+        function finalizeMessage(data) {
+            showTyping(false);
+            isProcessing = false;
+            document.getElementById('sendBtn').disabled = false;
+
+            if (streamingDiv) {
+                const container = document.getElementById('messages');
+                container.removeChild(streamingDiv);
+                streamingDiv = null;
+            }
+
+            addMessage('assistant', data.content, data.recommendations, {
+                evaluator_score: data.evaluator_score,
+                intents: data.intents,
+            });
+
+            // Update profile
+            if (data.profile_completeness !== undefined) {
+                updateCompleteness(data.profile_completeness);
+            }
+
+            // Update journey
+            if (data.journey_phase) {
+                updateJourneyPhase(data.journey_phase);
+            }
+            if (data.journey_step) {
+                updateJourneyStep(data.journey_step);
+            }
+
+            // Fetch live profile
+            fetchProfile();
+        }
+
+        // --- Send ---
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text || isProcessing) return;
+
+            addMessage('user', text);
+            input.value = '';
+            input.style.height = 'auto';
+            isProcessing = true;
+            document.getElementById('sendBtn').disabled = true;
+            showTyping(true);
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({user_id: userId, message: text}));
+            } else {
+                // Fallback to REST
+                fetchREST(text);
+            }
+        }
+
+        async function fetchREST(text) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: sessionId, user_id: userId, message: text})
+                });
+                const data = await resp.json();
+                showTyping(false);
+                isProcessing = false;
+                document.getElementById('sendBtn').disabled = false;
+                addMessage('assistant', data.response, data.recommendations, {
+                    evaluator_score: data.evaluator_score || 0,
+                    intents: data.intents || [],
+                });
+                if (data.profile_completeness !== undefined) updateCompleteness(data.profile_completeness);
+                if (data.journey_phase) updateJourneyPhase(data.journey_phase);
+                fetchProfile();
+            } catch (e) {
+                showTyping(false);
+                isProcessing = false;
+                document.getElementById('sendBtn').disabled = false;
+                addMessage('assistant', 'Sorry, I had trouble connecting. Please try again.');
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+            // Auto-resize textarea
+            const ta = e.target;
+            setTimeout(() => {
+                ta.style.height = 'auto';
+                ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+            }, 0);
+        }
+
+        // --- Profile ---
+        async function fetchProfile() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/session/${sessionId}/profile`);
+                const data = await resp.json();
+                renderProfile(data.profile);
+                updateCompleteness(data.completeness);
+            } catch (e) {}
+        }
+
+        function renderProfile(profile) {
+            const container = document.getElementById('profileFields');
+            if (!profile) return;
+
+            const fields = [
+                {key: 'persona_tag', label: 'Persona'},
+                {key: 'age_band', label: 'Age Band'},
+                {key: 'life_stage', label: 'Life Stage'},
+                {key: 'income_band', label: 'Income Band'},
+                {key: 'investment_experience', label: 'Investment Experience'},
+                {key: 'primary_financial_goal', label: 'Financial Goal'},
+                {key: 'risk_appetite', label: 'Risk Appetite'},
+                {key: 'et_subscription_status', label: 'ET Subscription'},
+                {key: 'et_products_used', label: 'ET Products Used'},
+                {key: 'current_investments', label: 'Current Investments'},
+                {key: 'detected_life_events', label: 'Life Events Detected'},
+                {key: 'urgency_level', label: 'Urgency'},
+            ];
+
+            let html = '';
+            const confidences = profile.confidence_scores || {};
+            for (const f of fields) {
+                let val = profile[f.key];
+                if (!val || val === '' || val === 'none' || (Array.isArray(val) && val.length === 0)) continue;
+
+                if (Array.isArray(val)) val = val.join(', ');
+                const conf = confidences[f.key];
+                const confStr = conf ? `(${(conf * 100).toFixed(0)}%)` : '';
+
+                html += `<div class="profile-field">
+                    <div class="label">${f.label}</div>
+                    <div class="value">${escapeHtml(String(val).replace(/_/g, ' '))} <span class="confidence">${confStr}</span></div>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function updateCompleteness(value) {
+            const pct = Math.round(value * 100);
+            document.getElementById('completenessText').textContent = pct + '%';
+            document.getElementById('completenessBar').style.width = pct + '%';
+        }
+
+        // --- Journey ---
+        function updateJourneyPhase(phase) {
+            const phases = ['discover', 'engage', 'commit', 'deepen'];
+            const idx = phases.indexOf(phase);
+            for (let i = 0; i < phases.length; i++) {
+                const dot = document.getElementById('dot-' + phases[i]);
+                if (!dot) continue;
+                dot.className = 'phase-dot';
+                if (i < idx) dot.classList.add('completed');
+                else if (i === idx) dot.classList.add('active');
+            }
+        }
+
+        function updateJourneyStep(step) {
+            const container = document.getElementById('journeySteps');
+            if (!step) return;
+            container.innerHTML = `<div class="journey-step">
+                <div class="step-label">Next Step</div>
+                <div class="step-action">${escapeHtml(step.action || '')}</div>
+                ${step.url ? `<a href="${escapeHtml(step.url)}" target="_blank" rel="noopener" class="step-cta">${escapeHtml(step.cta || 'Go')}</a>` : ''}
+            </div>`;
+        }
+
+        // --- UI helpers ---
+        function showTyping(show) {
+            document.getElementById('typingIndicator').className = show ? 'typing-indicator active' : 'typing-indicator';
+        }
+
+        function scrollToBottom() {
+            const el = document.getElementById('messages');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Renders plain text with markdown-style links [text](url) → <a> tags
+        function renderContent(str) {
+            // Escape HTML first to prevent XSS
+            let escaped = escapeHtml(str);
+            // Convert **bold**
+            escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Convert [text](url) — only allow http/https URLs
+            escaped = escaped.replace(
+                /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+                '<a href="$2" target="_blank" rel="noopener noreferrer" class="inline-link">$1</a>'
+            );
+            // Convert newlines to <br>
+            escaped = escaped.replace(/\n/g, '<br>');
+            return escaped;
+        }
+
+        function togglePanel(id) {
+            document.getElementById(id).classList.toggle('open');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+            document.getElementById('themeToggle').textContent = current === 'dark' ? '\u2600' : '\u263E';
+        }
+
+        function toggleDemoPanel() {
+            const panel = document.getElementById('demoPanel');
+            panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        async function resetSession() {
+            document.getElementById('messages').innerHTML = '';
+            document.getElementById('profileFields').innerHTML = '';
+            updateCompleteness(0);
+            streamingDiv = null;
+            isProcessing = false;
+            document.getElementById('sendBtn').disabled = false;
+            if (ws) ws.close();
+            await init();
+        }
+
+        // --- Demo scenarios ---
+        async function runDemo(scenario) {
+            if (demoRunning) return;
+            demoRunning = true;
+
+            const btns = document.querySelectorAll('.demo-btn');
+            btns.forEach(b => b.disabled = true);
+
+            await resetSession();
+
+            const scenarioTurns = {
+                cold_start: [
+                    "Hi, I came across Economic Times. I'm not sure where to start — I have some savings but they're just sitting in my bank account.",
+                    "I'm 28, work in IT, earn decent but never really looked into investing. My friends keep talking about SIPs but I don't really know what that means.",
+                    "I want to start with something simple. What should I do first?"
+                ],
+                lapsed_subscriber: [
+                    "Hey, I used to have ET Prime but my subscription lapsed a while back. Just browsing again.",
+                    "Yeah I mainly used to follow the markets stuff, especially smallcap coverage.",
+                    "What's new? Is there a reason to come back?"
+                ],
+                cross_sell_home_loan: [
+                    "What are the current home loan interest rates? Nifty is volatile today too.",
+                    "I've been comparing SBI and HDFC home loan rates. The ET article mentioned 8.5% but that seems high.",
+                    "Is this a good time to buy property given market conditions?"
+                ]
+            };
+
+            const turns = scenarioTurns[scenario] || [];
+            for (const turn of turns) {
+                document.getElementById('userInput').value = turn;
+                await sleep(800);
+                sendMessage();
+                // Wait for response
+                await waitForResponse();
+                await sleep(1000);
+            }
+
+            demoRunning = false;
+            btns.forEach(b => b.disabled = false);
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function waitForResponse() {
+            return new Promise(resolve => {
+                const check = setInterval(() => {
+                    if (!isProcessing) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 200);
+                // Timeout after 30s
+                setTimeout(() => { clearInterval(check); resolve(); }, 30000);
+            });
+        }
+
+        // --- Start ---
+        init();
+    </script>
+</body>
+</html>

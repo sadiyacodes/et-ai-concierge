@@ -1,0 +1,132 @@
+# ET AI Concierge — Master Configuration
+
+app:
+  name: "ET AI Concierge"
+  version: "1.0.0"
+  debug: true
+  port: 8000
+
+llm:
+  primary:
+    provider: "google"
+    model: "gemini-2.0-flash"
+    temperature: 0.3
+    max_tokens: 512
+  ollama:
+    provider: "ollama"
+    model: "mistral:7b"
+    temperature: 0.3
+    base_url: "http://localhost:11434"
+  routing:
+    use_small_model_for:
+      - "intent_classification"
+      - "signal_detection"
+      - "guardrail_check"
+    use_large_model_for:
+      - "response_generation"
+      - "profile_extraction"
+      - "journey_planning"
+
+exa:
+  enabled: true
+  site_filter: "economictimes.indiatimes.com"
+  max_results: 5
+  use_highlights: true
+  summary_length: 3   # sentences per result
+
+embeddings:
+  provider: "sentence-transformers"
+  model: "all-MiniLM-L6-v2"
+
+vector_db:
+  provider: "chromadb"
+  persist_path: "./data/chroma"
+  collection_name: "et_products"
+
+database:
+  sqlite_path: "./data/et_concierge.db"
+
+agents:
+  profiler:
+    max_questions_per_session: 5
+    target_completeness: 0.8
+    completeness_threshold_for_recommendations: 0.4
+
+  recommender:
+    max_recommendations_per_turn: 3
+    min_relevance_score: 0.55
+
+  cross_sell:
+    max_injections_per_session: 3
+    min_turns_between_injections: 3
+    signal_confidence_threshold: 0.65
+
+  evaluator:
+    pass_threshold: 0.75
+    max_retries: 2
+    weights:
+      relevance: 0.30
+      persona_fit: 0.25
+      recommendation_quality: 0.25
+      brand_safety: 0.15
+      conciseness: 0.05
+
+guardrails:
+  competitor_blacklist:
+    - "Moneycontrol"
+    - "Mint"
+    - "Livemint"
+    - "Zerodha"
+    - "Groww"
+    - "Kuvera"
+    - "Smallcase"
+    - "Bloomberg Quint"
+    - "NDTV Profit"
+    - "Business Standard"
+
+  required_disclaimers:
+    mutual_funds: "Mutual fund investments are subject to market risks. Please read all scheme-related documents carefully."
+    stocks: "This is not investment advice. Please consult a SEBI-registered advisor."
+
+  forbidden_patterns:
+    - "guaranteed returns"
+    - "risk-free investment"
+    - "definitely will grow"
+    - "100% safe"
+    - "no risk"
+
+personas:
+  first_time_investor:
+    tone: "warm, encouraging, jargon-free"
+    max_response_length: 4
+    priority_products:
+      - "et_sip_calculator"
+      - "et_money"
+      - "et_markets_beginner_guide"
+
+  seasoned_trader:
+    tone: "peer-to-peer, data-driven, concise"
+    max_response_length: 6
+    priority_products:
+      - "et_markets_advanced"
+      - "et_prime"
+      - "et_wealth_summit"
+
+  lapsed_subscriber:
+    tone: "welcoming, specific, value-forward"
+    max_response_length: 5
+    priority_products:
+      - "et_prime_reengagement"
+      - "new_features_since_lapse"
+
+journey:
+  phases:
+    - "discover"
+    - "engage"
+    - "commit"
+    - "deepen"
+  max_visible_steps: 3
+  phase_advancement_criteria:
+    discover_to_engage: "user_clicked_one_recommendation OR profile_completeness > 0.6"
+    engage_to_commit: "user_asked_about_pricing OR profile_completeness > 0.8"
+    commit_to_deepen: "subscription_converted OR tool_adopted"

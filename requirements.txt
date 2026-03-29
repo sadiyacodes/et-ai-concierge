@@ -1,0 +1,45 @@
+# ET AI Concierge — Dependencies
+# Python 3.11+ required
+
+# Web Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+websockets==14.1
+python-multipart==0.0.18
+
+# LangChain / LangGraph
+langchain==0.3.14
+langchain-core==0.3.29
+langchain-google-genai==2.0.8
+google-genai>=1.0.0
+langgraph==0.2.62
+
+# Vector DB & Embeddings (optional — keyword fallback used if unavailable)
+# chromadb requires C++ build tools on Windows; install if available:
+#   pip install chromadb==0.6.3 sentence-transformers==3.3.1
+# The system works without them using keyword-based product search.
+
+# Data Validation
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# Database
+sqlalchemy==2.0.36
+
+# Config & Environment
+python-dotenv==1.0.1
+pyyaml==6.0.2
+
+# Exa Search API (real-time ET content search)
+exa-py==1.5.0
+
+# Observability
+langsmith==0.2.10
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+
+# Utilities
+aiofiles==24.1.0

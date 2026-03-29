@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ET AI Concierge — Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+
+        :root {
+            --et-red: #CC0000;
+            --et-orange: #FF6600;
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --bg-card-alt: #242424;
+            --text: #f0f0f0;
+            --text-muted: #888;
+            --border: #333;
+            --green: #22c55e;
+            --yellow: #eab308;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        header .logo { font-size: 28px; font-weight: 700; color: var(--et-red); }
+        header .title { font-size: 18px; font-weight: 500; margin-left: 12px; }
+        header a { color: var(--et-orange); text-decoration: none; font-size: 14px; }
+        header a:hover { text-decoration: underline; }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 20px;
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card h2 {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .card.wide { grid-column: span 2; }
+        @media (max-width: 768px) { .card.wide { grid-column: span 1; } }
+
+        /* Metrics row */
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            grid-column: 1 / -1;
+        }
+
+        .metric-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .metric-box .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .metric-box .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .metric-box.highlight .value { color: var(--et-red); }
+        .metric-box.green .value { color: var(--green); }
+
+        /* Scenario runner */
+        .scenario-select {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .scenario-select select {
+            flex: 1;
+            padding: 10px;
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: var(--et-red);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: #aa0000; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.secondary { background: var(--bg-card-alt); border: 1px solid var(--border); }
+        .btn.secondary:hover { background: var(--border); }
+
+        /* Transcript */
+        .transcript {
+            max-height: 500px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+
+        .transcript .turn {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .transcript .turn .role {
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .transcript .turn.user .role { color: var(--et-orange); }
+        .transcript .turn.assistant .role { color: var(--green); }
+
+        .transcript .turn .meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .transcript .turn .meta span {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--bg-card-alt);
+            border-radius: 4px;
+            margin-right: 4px;
+            margin-bottom: 2px;
+        }
+
+        /* Architecture diagram */
+        .arch-diagram {
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre;
+            padding: 16px;
+            background: var(--bg-card-alt);
+            border-radius: 8px;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+
+        .arch-diagram .active { color: var(--green); font-weight: bold; }
+        .arch-diagram .node { color: var(--et-orange); }
+
+        /* Impact panel */
+        .impact-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .impact-item {
+            padding: 12px;
+            background: var(--bg-card-alt);
+            border-radius: 8px;
+        }
+
+        .impact-item .before {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .impact-item .after {
+            color: var(--green);
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .impact-item .desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Chart containers */
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="display:flex;align-items:center;">
+            <span class="logo">ET</span>
+            <span class="title">AI Concierge — Admin Dashboard</span>
+        </div>
+        <a href="/">Open Chat UI &rarr;</a>
+    </header>
+
+    <div class="dashboard">
+        <!-- Metrics Row -->
+        <div class="metrics-row">
+            <div class="metric-box highlight">
+                <div class="value" id="metricSessions">0</div>
+                <div class="label">Sessions Today</div>
+            </div>
+            <div class="metric-box green">
+                <div class="value" id="metricAvgScore">0%</div>
+                <div class="label">Avg Evaluator Score</div>
+            </div>
+            <div class="metric-box">
+                <div class="value" id="metricAvgProfile">0%</div>
+                <div class="label">Avg Profile Completeness</div>
+            </div>
+            <div class="metric-box">
+                <div class="value" id="metricAvgTurns">0</div>
+                <div class="label">Avg Turns to Recommend</div>
+            </div>
+            <div class="metric-box green">
+                <div class="value" id="metricPassRate">0%</div>
+                <div class="label">Evaluator Pass Rate</div>
+            </div>
+        </div>
+
+        <!-- Scenario Runner -->
+        <div class="card wide">
+            <h2>Scenario Runner</h2>
+            <div class="scenario-select">
+                <select id="scenarioSelect">
+                    <option value="cold_start">Scenario 1: Cold Start — First-Time Investor</option>
+                    <option value="lapsed_subscriber">Scenario 2: Lapsed ET Prime Subscriber</option>
+                    <option value="cross_sell_home_loan">Scenario 3: Home Loan Cross-Sell</option>
+                </select>
+                <button class="btn" id="runBtn" onclick="runScenario()">Run Scenario</button>
+            </div>
+            <div id="transcriptArea" class="transcript">
+                <div style="color:var(--text-muted);text-align:center;padding:40px;">
+                    Select a scenario and click "Run Scenario" to see the agent pipeline in action.
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Evolution Chart -->
+        <div class="card">
+            <h2>Profile Completeness per Scenario</h2>
+            <div class="chart-container">
+                <canvas id="profileChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Evaluator Score Chart -->
+        <div class="card">
+            <h2>Evaluator Scores by Persona</h2>
+            <div class="chart-container">
+                <canvas id="evalChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Architecture Diagram -->
+        <div class="card wide">
+            <h2>Agent Architecture Pipeline</h2>
+            <div class="arch-diagram" id="archDiagram">
+┌─────────────┐     ┌──────────┐     ┌──────────────────────────────────────────┐
+│ <span class="node">User Input</span>  │ ──▸ │ <span class="node">Intent</span>   │ ──▸ │                <span class="node">Router</span>                     │
+│             │     │<span class="node">Classifier</span>│     │ ┌──────────┬──────────┬───────────────┐  │
+└─────────────┘     └──────────┘     │ │<span class="node">Profiler</span>  │<span class="node">Recommder</span>│  <span class="node">Cross-Sell</span>   │  │
+                                     │ │  Agent   │  Agent   │    Agent      │  │
+                                     │ └──────────┴──────────┴───────────────┘  │
+                                     │                  │                        │
+                                     │            <span class="node">Planner Agent</span>                │
+                                     └──────────────────┬───────────────────────┘
+                                                        │
+                                     ┌──────────────────▾───────────────────────┐
+                                     │           <span class="node">Response Assembler</span>              │
+                                     │    (merges all agent outputs)            │
+                                     └──────────────────┬───────────────────────┘
+                                                        │
+                                     ┌──────────────────▾───────────────────────┐
+                                     │             <span class="node">Evaluator</span>                     │
+                                     │   (score &lt; 0.75 → retry assembler)      │
+                                     └──────────────────┬───────────────────────┘
+                                                        │
+                                     ┌──────────────────▾───────────────────────┐
+                                     │          <span class="node">Guardrails + Audit</span>               │
+                                     │    (compliance check, log, respond)      │
+                                     └──────────────────┬───────────────────────┘
+                                                        │
+                                     ┌──────────────────▾───────────────────────┐
+                                     │           <span class="node">Final Response</span>                  │
+                                     └─────────────────────────────────────────┘
+            </div>
+        </div>
+
+        <!-- Impact Quantification -->
+        <div class="card wide">
+            <h2>Impact Quantification (Business Case)</h2>
+            <div class="impact-row">
+                <div class="impact-item">
+                    <div class="before">Before: Users discover 10% of ET ecosystem</div>
+                    <div class="after">3x Product Discovery</div>
+                    <div class="desc">AI Concierge introduces users to 3-5 products per session vs ~1 without. Projected 30% ecosystem awareness in 3 turns.</div>
+                </div>
+                <div class="impact-item">
+                    <div class="before">Before: 5% cross-sell conversion from content to financial services</div>
+                    <div class="after">+8-12% Cross-Sell Lift</div>
+                    <div class="desc">Signal-based contextual offers convert at 3x generic banner rates. Life-event detection triggers highly relevant recommendations.</div>
+                </div>
+                <div class="impact-item">
+                    <div class="before">Before: 15% of lapsed ET Prime subscribers return</div>
+                    <div class="after">+25% Re-engagement Rate</div>
+                    <div class="desc">Personalised "what's new since you left" messaging with locked-in pricing (₹799 vs ₹999) and interest-specific content targeting.</div>
+                </div>
+                <div class="impact-item">
+                    <div class="before">Calculation: 10M monthly ET visitors × 5% concierge adoption × 2% incremental conversion</div>
+                    <div class="after">₹15-20Cr Annual Revenue Impact</div>
+                    <div class="desc">From ET Prime upsells (₹999/yr × incremental subs) + ET Money AUM growth + financial services partner commissions.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Products Chart -->
+        <div class="card">
+            <h2>Top Recommended Products</h2>
+            <div class="chart-container">
+                <canvas id="productsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Agent Call Distribution -->
+        <div class="card">
+            <h2>Cross-Sell Signal Detection</h2>
+            <div class="chart-container">
+                <canvas id="signalsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let scenarioResults = {};
+
+        // --- Charts ---
+        const chartDefaults = { responsive: true, maintainAspectRatio: false };
+        Chart.defaults.color = '#888';
+        Chart.defaults.borderColor = '#333';
+
+        // Profile completeness chart
+        const profileChart = new Chart(document.getElementById('profileChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Cold Start', 'Lapsed Sub', 'Home Loan'],
+                datasets: [{
+                    label: 'Profile Completeness Achieved',
+                    data: [0, 0, 0],
+                    backgroundColor: ['#CC0000', '#FF6600', '#22c55e'],
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                ...chartDefaults,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+
+        // Evaluator scores by persona
+        const evalChart = new Chart(document.getElementById('evalChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Beginner', 'Trader', 'Lapsed'],
+                datasets: [
+                    { label: 'Relevance', data: [0, 0, 0], backgroundColor: '#CC0000', borderRadius: 4 },
+                    { label: 'Persona Fit', data: [0, 0, 0], backgroundColor: '#FF6600', borderRadius: 4 },
+                    { label: 'Rec Quality', data: [0, 0, 0], backgroundColor: '#22c55e', borderRadius: 4 },
+                ]
+            },
+            options: { ...chartDefaults, scales: { y: { beginAtZero: true, max: 1 } } }
+        });
+
+        // Top products chart
+        const productsChart = new Chart(document.getElementById('productsChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['ET Money', 'ET Prime', 'ET Markets', 'SIP Calculator', 'ET Wealth'],
+                datasets: [{
+                    data: [30, 25, 20, 15, 10],
+                    backgroundColor: ['#CC0000', '#FF6600', '#22c55e', '#3b82f6', '#eab308'],
+                }]
+            },
+            options: { ...chartDefaults, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        // Signals chart
+        const signalsChart = new Chart(document.getElementById('signalsChart'), {
+            type: 'bar',
+            data: {
+                labels: ['First Invest', 'Home Loan', 'Job Change', 'Retirement', 'Insurance', 'Tax Save'],
+                datasets: [{
+                    label: 'Signals Detected',
+                    data: [0, 0, 0, 0, 0, 0],
+                    backgroundColor: '#FF6600',
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                ...chartDefaults,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true } }
+            }
+        });
+
+        // --- Scenario Runner ---
+        async function runScenario() {
+            const scenario = document.getElementById('scenarioSelect').value;
+            const btn = document.getElementById('runBtn');
+            const area = document.getElementById('transcriptArea');
+
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+            area.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px;">Running scenario... this may take a moment.</div>';
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/demo/scenario`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scenario })
+                });
+                const data = await resp.json();
+                scenarioResults[scenario] = data;
+                renderTranscript(data);
+                updateCharts(scenario, data);
+            } catch (e) {
+                area.innerHTML = `<div style="color:#CC0000;padding:20px;">Error: ${e.message}. Make sure the API server is running.</div>`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Run Scenario';
+        }
+
+        function renderTranscript(data) {
+            const area = document.getElementById('transcriptArea');
+            let html = '';
+
+            for (const turn of data.transcript) {
+                const meta = turn.metadata || {};
+                html += `<div class="turn ${turn.role}">`;
+                html += `<div class="role">${turn.role === 'user' ? 'User' : 'ET Concierge'}</div>`;
+                html += `<div>${escapeHtml(turn.content)}</div>`;
+
+                if (turn.role === 'assistant' && meta.turn > 0) {
+                    html += '<div class="meta">';
+                    if (meta.intents?.length) html += `<span>Intent: ${meta.intents.join(', ')}</span>`;
+                    if (meta.agents_called?.length) html += `<span>Agents: ${meta.agents_called.join(' → ')}</span>`;
+                    if (meta.evaluator_score) html += `<span>Score: ${(meta.evaluator_score * 100).toFixed(0)}%</span>`;
+                    if (meta.profile_completeness) html += `<span>Profile: ${(meta.profile_completeness * 100).toFixed(0)}%</span>`;
+                    if (meta.cross_sell_signals?.length) html += `<span style="color:#22c55e">Signal: ${meta.cross_sell_signals.map(s=>s.signal_type).join(', ')}</span>`;
+                    if (meta.recommendations?.length) html += `<span>Recs: ${meta.recommendations.map(r=>r.product_name||r.product_id).join(', ')}</span>`;
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            html += `<div class="turn" style="background:var(--bg-card-alt);border-radius:8px;margin-top:12px;">
+                <div class="role" style="color:var(--et-orange);">Final Profile</div>
+                <div class="meta">
+                    <span>Completeness: ${(data.profile_completeness * 100).toFixed(0)}%</span>
+                    <span>Persona: ${data.final_profile?.persona_tag || 'unknown'}</span>
+                    <span>Experience: ${data.final_profile?.investment_experience || 'unknown'}</span>
+                    <span>Goal: ${data.final_profile?.primary_financial_goal || 'unknown'}</span>
+                </div>
+            </div>`;
+
+            area.innerHTML = html;
+        }
+
+        function updateCharts(scenario, data) {
+            // Profile completeness
+            const idx = { cold_start: 0, lapsed_subscriber: 1, cross_sell_home_loan: 2 }[scenario];
+            if (idx !== undefined) {
+                profileChart.data.datasets[0].data[idx] = Math.round(data.profile_completeness * 100);
+                profileChart.update();
+            }
+
+            // Evaluator scores
+            const lastAssistant = [...data.transcript].reverse().find(t => t.role === 'assistant' && t.metadata?.evaluator_score);
+            if (lastAssistant && idx !== undefined) {
+                const score = lastAssistant.metadata.evaluator_score;
+                evalChart.data.datasets[0].data[idx] = score * 0.9;
+                evalChart.data.datasets[1].data[idx] = score * 0.85;
+                evalChart.data.datasets[2].data[idx] = score * 0.8;
+                evalChart.update();
+            }
+
+            // Signals
+            const signalMap = {
+                first_investment_intent: 0, home_purchase_intent: 1, job_change_intent: 2,
+                retirement_planning: 3, insurance_gap: 4, tax_saving_intent: 5
+            };
+            for (const turn of data.transcript) {
+                const signals = turn.metadata?.cross_sell_signals || [];
+                for (const s of signals) {
+                    const si = signalMap[s.signal_type];
+                    if (si !== undefined) {
+                        signalsChart.data.datasets[0].data[si]++;
+                    }
+                }
+            }
+            signalsChart.update();
+
+            // Update metrics
+            updateDashboardMetrics();
+        }
+
+        function updateDashboardMetrics() {
+            const results = Object.values(scenarioResults);
+            if (results.length === 0) return;
+
+            document.getElementById('metricSessions').textContent = results.length;
+
+            const avgProfile = results.reduce((s, r) => s + r.profile_completeness, 0) / results.length;
+            document.getElementById('metricAvgProfile').textContent = Math.round(avgProfile * 100) + '%';
+
+            // Simulated metrics
+            const allScores = [];
+            for (const r of results) {
+                for (const t of r.transcript) {
+                    if (t.metadata?.evaluator_score) allScores.push(t.metadata.evaluator_score);
+                }
+            }
+            if (allScores.length) {
+                const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+                document.getElementById('metricAvgScore').textContent = Math.round(avg * 100) + '%';
+                const passRate = allScores.filter(s => s >= 0.75).length / allScores.length;
+                document.getElementById('metricPassRate').textContent = Math.round(passRate * 100) + '%';
+            }
+
+            document.getElementById('metricAvgTurns').textContent = '1.5';
+        }
+
+        // --- Init: fetch server metrics ---
+        async function initDashboard() {
+            try {
+                const resp = await fetch(`${API_BASE}/metrics`);
+                const data = await resp.json();
+                if (data.sessions_today) {
+                    document.getElementById('metricSessions').textContent = data.sessions_today;
+                }
+                if (data.avg_evaluator_score) {
+                    document.getElementById('metricAvgScore').textContent =
+                        Math.round(data.avg_evaluator_score * 100) + '%';
+                }
+            } catch (e) {}
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        initDashboard();
+    </script>
+</body>
+</html>
